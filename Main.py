@@ -49,19 +49,33 @@ elif game_type == "b":
     # list of words to translate from Japanese to English.
     japanese_words = list(Translations.translations.keys())
 
+    # If a word is picked once, do not repeat it.
+    used_words = [] 
+
     while True: 
+        # Filter out used words at the start of the loop.
+        available_words = [word for word in Translations.translations if word not in used_words]
+
+        # End game once all words have been used.
+        if not available_words:
+            print("You have completed all the available translations!")
+            break
+
         # Pick a random word for player to translate to English.
-        word = random.choice(japanese_words) # Randomly pick a Japanese word (key).
+        word = random.choice(available_words) # Randomly pick a Japanese word (key).
         translation = Translations.translations[word] # Look up the Japanese translation (value).
 
         # Get the players translation.
-        player_translation = input(f"What is the English word for '{translation}'? ")
+        player_translation = input(f"What is the English word for '{translation}'? ").lower()
 
         # Check if players translation is correct.
-        if player_translation == word:
+        if player_translation == word.lower():
             print("Correct! Well done.")
         else:
             print(f"Oops! The correct translation is '{word}'.")
+
+        # Add the word to the used list
+        used_words.append(word)
 
         play_again = input("Do you want to try another word? (yes/no) ").lower()
         if play_again != "yes":
