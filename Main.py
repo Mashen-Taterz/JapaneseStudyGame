@@ -19,9 +19,9 @@ while True:
 
 # Chose a game you want to play (ask or answer).
 while True:
-    game_type = input ("Do you want me to translate English words into Japanese (A), or answer my promtps (B)? ").lower()
+    game_type = input ("Do you want me to translate English words into Japanese (A), or answer my prompts (B)? ").lower()
     if game_type == "a":
-        print ("Ok, you give me a word and I will attemp to translate for you.")
+        print ("Ok, you give me a word and I will attempt to translate it for you.")
         break 
     elif game_type == "b":
         print ("Ok, You will have to translate my Japanese into English.")
@@ -52,6 +52,17 @@ elif game_type == "b":
     # If a word is picked once, do not repeat it.
     used_words = [] 
 
+    score = 0 # Initialize score.
+
+    def keep_score(player_translation, word, score):
+        # Check if the player's translation is correct.
+        if player_translation == word:
+            score += 1
+            print("Correct! Well done.")
+        else:
+            print(f"Oops! The correct translation is '{word}'.")
+        return score
+
     while True: 
         # Filter out used words at the start of the loop.
         available_words = [word for word in Translations.translations if word not in used_words]
@@ -59,6 +70,7 @@ elif game_type == "b":
         # End game once all words have been used.
         if not available_words:
             print("You have completed all the available translations!")
+            print(f"You scored {score} points {name}!")
             break
 
         # Pick a random word for player to translate to English.
@@ -68,16 +80,13 @@ elif game_type == "b":
         # Get the players translation.
         player_translation = input(f"What is the English word for '{translation}'? ").lower()
 
-        # Check if players translation is correct.
-        if player_translation == word.lower():
-            print("Correct! Well done.")
-        else:
-            print(f"Oops! The correct translation is '{word}'.")
+        #Update score.
+        score = keep_score(player_translation, word, score)
 
         # Add the word to the used list
         used_words.append(word)
 
         play_again = input("Do you want to try another word? (yes/no) ").lower()
         if play_again != "yes":
-            print("Thanks for playing!")
-            break
+            print(f"Thanks for playing {name}! Your final score is {score}.")
+            break 
