@@ -1,8 +1,4 @@
-import json
-
-# Translations for English and Japanese with Romaji for pronounciation
-translations = {
-# Common words
+{
     "hello": "こんにちは (Konnichiwa)",
     "goodbye": "さようなら (Sayōnara)",
     "this": "これ (Kore)",
@@ -15,7 +11,6 @@ translations = {
     "they": "彼ら (Karera)",
     "hot": "暑い (Atsui)",
     "cold": "寒い (Samui)",
-# Colors
     "red": "赤 (Aka)",
     "blue": "青 (Ao)",
     "green": "緑 (Midori)",
@@ -24,7 +19,6 @@ translations = {
     "orange": "オレンジ (Orenji)",
     "white": "白 (Shiro)",
     "black": "黒 (Kuro)",
-# Numbers
     "1": "一 (Ichi)",
     "2": "二 (Ni)",
     "3": "三 (San)",
@@ -36,9 +30,3 @@ translations = {
     "9": "九 (Kyū)",
     "10": "十 (Jū)"
 }
-
-# Save the dictionary to a JSON file
-with open("translations.json", "w", encoding="utf-8") as file:
-    json.dump(translations, file, ensure_ascii=False, indent=4)
-
-print("Translations saved to translations.json")

@@ -7,3 +7,5 @@ With this I can enjoy learning more Japanese and Programming at the same time.
 
 My hopes are to add to this games library of words and phrases and also 
 move onto the front end to make it more fun and interactive.
+
+To run game: http://localhost:8000/ 
