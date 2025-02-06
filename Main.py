@@ -1,92 +1,78 @@
+from flask import Flask, request, jsonify
+from flask_cors import CORS
 import Translations
 import random
 
-# Start off asking the players name.
-name = input ("Hello! What is your name? ")
-print (f"Hi, {name} ")
+app = Flask(__name__)
+CORS(app)
 
-# Ask if we are ready to start the game.
-while True:
-    ready = input ("Are you ready to play a game? ").lower() # Convert input to lowercase.
-    if ready == "yes":
-        print ("Great!")
-        break # Exit loop.
-    elif ready == "no":
-        print ("Maybe another time!")
-        break # Exit loop.
-    else: 
-        print ("I did not quite get that. Lets try again!") # Repeat the loop.
+# Store player data globally
+player_data = {"name": "", "score": 0, "used_words": []}
 
-# Chose a game you want to play (ask or answer).
-while True:
-    game_type = input ("Do you want me to translate English words into Japanese (A), or answer my prompts (B)? ").lower()
+
+@app.route("/start", methods=["POST"])
+def start_game():
+    """Start the game and store the player's name."""
+    data = request.json
+    player_data["name"] = data.get("name", "Player")
+    return jsonify({"message": f"Hi, {player_data['name']}! Welcome to the Japanese Study Game."})
+
+# Choose game mode
+@app.route("/choose_mode", methods=["POST"])
+def choose_mode():
+    """Choose game mode (A or B)."""
+    data = request.json
+    game_type = data.get("mode", "").lower()
+
     if game_type == "a":
-        print ("Ok, you give me a word and I will attempt to translate it for you.")
-        break 
+        return jsonify({"message": "Type an English word, and I'll translate it into Japanese!"})
     elif game_type == "b":
-        print ("Ok, You will have to translate my Japanese into English.")
-        break
+        player_data["score"] = 0
+        player_data["used_words"] = []
+        return jsonify({"message": "I'll give you a Japanese word, and you translate it into English!", "score": player_data["score"]})
     else:
-        print ("Try game type A or B. ")
+        return jsonify({"error": "Invalid mode. Choose A or B."}), 400
 
-# Game type A : Ask to translate English to Japanese.
-if game_type == "a":
-    while True:
-        word = input ("Enter a word you would like translated: ").lower() # The user provides an English word.
-        if word in Translations.translations: # Check if the word is in the dictionary (key).
-            translation = Translations.translations[word] # Look up the translation (value).
-            print (f"The Japanese translation for '{word}' is: {translation}")
-        else:
-            print (f"Sorry I don't have the translation for '{word}' yet.")
-        play_again = input ("Do you want to try another word? (yes/no) ").lower()
-        if play_again != "yes": # Anything but a "yes" will end the game.
-            print("Thanks for playing!")
-            break
 
-# Game type B : Answer the Japanese promt to English. 
-elif game_type == "b":
-    #import random.
-    # list of words to translate from Japanese to English.
-    japanese_words = list(Translations.translations.keys())
+@app.route("/translate", methods=["POST"])
+def translate_word():
+    """Handle English to Japanese translation (Mode A)."""
+    data = request.json
+    word = data.get("word", "").lower()
 
-    # If a word is picked once, do not repeat it.
-    used_words = [] 
+    if word in Translations.translations:
+        return jsonify({"word": word, "translation": Translations.translations[word]})
+    else:
+        return jsonify({"error": f"Sorry, I don't have a translation for '{word}' yet."})
 
-    score = 0 # Initialize score.
 
-    def keep_score(player_translation, word, score):
-        # Check if the player's translation is correct.
-        if player_translation == word:
-            score += 1
-            print("Correct! Well done.")
-        else:
-            print(f"Oops! The correct translation is '{word}'.")
-        return score
+@app.route("/get_japanese_word", methods=["GET"])
+def get_japanese_word():
+    """Send a random Japanese word for Mode B."""
+    available_words = [word for word in Translations.translations if word not in player_data["used_words"]]
 
-    while True: 
-        # Filter out used words at the start of the loop.
-        available_words = [word for word in Translations.translations if word not in used_words]
+    if not available_words:
+        return jsonify({"message": "You have completed all translations!", "score": player_data["score"]})
 
-        # End game once all words have been used.
-        if not available_words:
-            print("You have completed all the available translations!")
-            print(f"You scored {score} points {name}!")
-            break
+    word = random.choice(available_words)
+    player_data["used_words"].append(word)
 
-        # Pick a random word for player to translate to English.
-        word = random.choice(available_words) # Randomly pick a Japanese word (key).
-        translation = Translations.translations[word] # Look up the Japanese translation (value).
+    return jsonify({"japanese_word": Translations.translations[word], "english_word": word})
 
-        # Get the players translation.
-        player_translation = input(f"What is the English word for '{translation}'? ").lower()
 
-        #Update score.
-        score = keep_score(player_translation, word, score)
+@app.route("/check_answer", methods=["POST"])
+def check_answer():
+    """Check if the user's answer is correct in Mode B."""
+    data = request.json
+    user_translation = data.get("user_translation", "").lower()
+    correct_word = data.get("correct_word", "")
 
-        # Add the word to the used list
-        used_words.append(word)
+    if user_translation == correct_word:
+        player_data["score"] += 1
+        return jsonify({"correct": True, "score": player_data["score"], "message": "Correct! Well done."})
+    else:
+        return jsonify({"correct": False, "score": player_data["score"], "message": f"Oops! The correct translation is '{correct_word}'."})
 
-        play_again = input("Do you want to try another word? (yes/no) ").lower()
-        if play_again != "yes":
-            print(f"Thanks for playing {name}! Your final score is {score}.")
-            break 
+
+if __name__ == "__main__":
+    app.run(debug=True)

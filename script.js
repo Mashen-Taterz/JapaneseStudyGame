@@ -1,69 +1,157 @@
-let translations = {}; // Empty object to store the dictionary
-
-// Fetch the JSON file
-fetch("translations.json")
-    .then(response => response.json())
-    .then(data => {
-        translations = data; // Store the dictionary in JavaScript
-        console.log(translations); // Log the dictionary to make sure it's loaded correctly
-    })
-    .catch(error => console.error("Error loading translations:", error));
-
 document.addEventListener("DOMContentLoaded", () => {
     const startButton = document.getElementById("start-button");
     const header = document.querySelector("header");
+    const chatOutput = document.getElementById("chat-output");
+    const chatInput = document.getElementById("chat-input");
+
+    let gameMode = ""; // Store the selected mode
+    let currentJapaneseWord = ""; // Store the Japanese word for Mode B
 
     startButton.addEventListener("click", () => {
-        // Hide header and start button
         header.style.display = "none";
         startButton.style.display = "none";
 
-        // Initialize the game (more logic will go here)
-        startGame();
+        // Ask for the player's name inside the chat
+        chatOutput.innerHTML = "<p>Hello! What is your name?</p>";
+        chatInput.placeholder = "Enter your name...";
+        chatInput.focus();
+
+        // Wait for the user to enter their name
+        chatInput.removeEventListener("keypress", enterName);
+        chatInput.addEventListener("keypress", enterName);
     });
 
-    function startGame() {
-        const chatOutput = document.getElementById("chat-output");
+    function enterName(event) {
+        if (event.key === "Enter") {
+            const playerName = chatInput.value.trim();
+            chatInput.value = ""; // Clear input field
+            
+            if (playerName === "") {
+                chatOutput.innerHTML += "<p>Please enter a valid name.</p>";
+                return;
+            }
 
-        // Clear chat output and prompt the user to choose a game mode
-        chatOutput.innerHTML = `
+            // Send name to Flask
+            fetch("http://127.0.0.1:5000/start", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name: playerName })
+            })
+            .then(response => response.json())
+            .then(data => {
+                chatOutput.innerHTML += `<p>${data.message}</p>`;
+                showGameModeSelection();
+            });
+
+            // Remove this event listener to prevent multiple triggers
+            chatInput.removeEventListener("keypress", enterName);
+        }
+    }
+
+    function showGameModeSelection() {
+        chatOutput.innerHTML += `
             <p>Do you want me to translate English words into Japanese (A), or answer my prompts (B)?</p>
-            <button id="mode-a">Mode A (English → Japanese)</button>
-            <button id="mode-b">Mode B (Japanese → English)</button>
+            <button id="mode-a">Mode A</button>
+            <button id="mode-b">Mode B</button>
         `;
 
-        // Wait for user to click on a mode
-        document.getElementById("mode-a").addEventListener("click", () => startModeA());
-        document.getElementById("mode-b").addEventListener("click", () => startModeB());
+        document.getElementById("mode-a").addEventListener("click", () => selectMode("a"));
+        document.getElementById("mode-b").addEventListener("click", () => selectMode("b"));
     }
 
-    function startModeA() {
-        const chatOutput = document.getElementById("chat-output");
-        const chatInput = document.getElementById("chat-input");
-    
-        chatOutput.innerHTML = "<p>Type an English word, and I'll translate it into Japanese!</p>";
-    
-        chatInput.addEventListener("keypress", function (event) {
-            if (event.key === "Enter") {
-                const word = chatInput.value.toLowerCase().trim(); // Get the input word
-                chatInput.value = ""; // Clear the input field
-    
-                // Check if the word exists in the translations dictionary
-                if (translations[word]) {
-                    chatOutput.innerHTML += `<p><strong>${word}</strong> in Japanese is: <strong>${translations[word]}</strong></p>`;
-                } else {
-                    chatOutput.innerHTML += `<p>Sorry, I don't have a translation for <strong>${word}</strong> yet.</p>`;
-                }
-    
-                // Auto-scroll to the bottom of the chat output
-                chatOutput.scrollTop = chatOutput.scrollHeight;
-            }
+    function selectMode(mode) {
+        fetch("http://127.0.0.1:5000/choose_mode", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ mode: mode })
+        })
+        .then(response => response.json())
+        .then(data => {
+            chatOutput.innerHTML = `<p>${data.message}</p>`;
+            gameMode = mode;
+            if (mode === "a") enableTranslationInput();
+            if (mode === "b") startModeB();
         });
-    }    
+    }
+
+    function enableTranslationInput() {
+        chatInput.placeholder = "Type an English word...";
+        
+        // Remove previous event listener before adding a new one
+        chatInput.removeEventListener("keypress", handleTranslationInput);
+        chatInput.addEventListener("keypress", handleTranslationInput);
+    }
+
+    function handleTranslationInput(event) {
+        if (event.key === "Enter") {
+            const word = chatInput.value.trim().toLowerCase();
+            chatInput.value = "";
+
+            fetch("http://127.0.0.1:5000/translate", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ word: word })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.translation) {
+                    chatOutput.innerHTML += `<p><strong>${word}</strong> in Japanese is: <strong>${data.translation}</strong></p>`;
+                } else {
+                    chatOutput.innerHTML += `<p>${data.error}</p>`;
+                }
+                chatOutput.scrollTop = chatOutput.scrollHeight;
+            });
+        }
+    }
 
     function startModeB() {
-        const chatOutput = document.getElementById("chat-output");
         chatOutput.innerHTML = "<p>I'll give you a Japanese word, and you translate it into English!</p>";
+        getNextJapaneseWord();
+    }
+
+    function getNextJapaneseWord() {
+        fetch("http://127.0.0.1:5000/get_japanese_word")
+        .then(response => response.json())
+        .then(data => {
+            if (data.message) {
+                chatOutput.innerHTML += `<p>${data.message} Your final score is: <strong>${data.score}</strong></p>`;
+                return;
+            }
+
+            currentJapaneseWord = data.english_word;
+            chatOutput.innerHTML += `<p>Translate this: <strong>${data.japanese_word}</strong></p>`;
+            chatOutput.scrollTop = chatOutput.scrollHeight; // Ensures scrolling to the latest question
+            enableAnswerInput();
+        });
+    }
+
+    function enableAnswerInput() {
+        chatInput.placeholder = "Type your English translation...";
+        
+        // Remove previous event listener before adding a new one
+        chatInput.removeEventListener("keypress", handleAnswerInput);
+        chatInput.addEventListener("keypress", handleAnswerInput);
+    }
+
+    function handleAnswerInput(event) {
+        if (event.key === "Enter") {
+            const userTranslation = chatInput.value.trim().toLowerCase();
+            chatInput.value = "";
+
+            fetch("http://127.0.0.1:5000/check_answer", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    user_translation: userTranslation,
+                    correct_word: currentJapaneseWord
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                chatOutput.innerHTML += `<p>${data.message} Your score: <strong>${data.score}</strong></p>`;
+                chatOutput.scrollTop = chatOutput.scrollHeight; // Ensures scrolling after answer feedback
+                getNextJapaneseWord();
+            });
+        }
     }
 });
-
