@@ -7,7 +7,8 @@ With this I can enjoy learning more Japanese and Programming at the same time.
 
 My hopes are to add to this games library of words and phrases over time while learning more about Full-stack Development.
 
-To run game: 1. Open a terminal and start the Flask backend:
+To run game: 
+             1. Open a terminal and start the Flask backend:
                 python main.py (Starts Flask backend (port 5000))
 
              2. Open a second terminal and start the frontend server:
