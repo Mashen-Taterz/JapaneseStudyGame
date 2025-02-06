@@ -37,8 +37,12 @@ translations = {
     "10": "十 (Jū)"
 }
 
+# Capitalize only the first letter of each key (English word)
+capitalized_translations = {key.title(): value for key, value in translations.items()}
+
 # Save the dictionary to a JSON file
 with open("translations.json", "w", encoding="utf-8") as file:
-    json.dump(translations, file, ensure_ascii=False, indent=4)
+    json.dump(capitalized_translations, file, ensure_ascii=False, indent=4)
+
 
 print("Translations saved to translations.json")

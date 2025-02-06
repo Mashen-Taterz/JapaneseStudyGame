@@ -95,7 +95,8 @@ document.addEventListener("DOMContentLoaded", () => {
             .then(response => response.json())
             .then(data => {
                 if (data.translation) {
-                    chatOutput.innerHTML += `<p><strong>${word}</strong> in Japanese is: <strong>${data.translation}</strong></p>`;
+                    chatOutput.innerHTML += chatOutput.innerHTML += `<p><strong>${word.charAt(0).toUpperCase() + word.slice(1)}</strong> in Japanese is: <strong>${data.translation}</strong></p>`;
+
                 } else {
                     chatOutput.innerHTML += `<p>${data.error}</p>`;
                 }
